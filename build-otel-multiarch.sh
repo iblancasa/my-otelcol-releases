@@ -8,7 +8,7 @@ VERSION="1.0.0"
 OCB_VERSION="0.133.0"
 BUILD_DIR="./build"
 DIST_DIR="./dist"
-DEFAULT_IMAGE_NAME="otelcol-custom"
+DEFAULT_IMAGE_NAME="opentelemetry-collector-contrib"
 DEFAULT_TAG="latest"
 PLATFORMS="linux/amd64,linux/arm64"
 
