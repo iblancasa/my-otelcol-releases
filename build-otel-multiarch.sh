@@ -240,7 +240,7 @@ build_collector() {
         "${ocb_path}" --config manifest.yaml --output-path="${arch_dist}"
 
         local binary_file
-        binary_file=$(find "${arch_dist}" -name "otelcol*" -type f -perm +111 | head -1)
+        binary_file=$(find "${arch_dist}" -name "otelcol*" -type f -executable | head -1)
 
         if [[ -n "${binary_file}" && -f "${binary_file}" ]]; then
             print_success "Collector binary built successfully for ${goarch}: $(basename "${binary_file}")"
