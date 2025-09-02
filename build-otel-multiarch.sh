@@ -4,7 +4,6 @@ set -e
 
 # Script configuration
 SCRIPT_NAME="build-otel-multiarch.sh"
-VERSION="1.0.0"
 OCB_VERSION="0.133.0"
 BUILD_DIR="./build"
 DIST_DIR="./dist"
@@ -38,7 +37,7 @@ print_error() {
 
 show_usage() {
     cat << EOF
-${SCRIPT_NAME} v${VERSION}
+${SCRIPT_NAME}
 
 Usage: $0 [OPTIONS]
 
@@ -123,12 +122,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Use override version if provided
 if [[ -n "${OCB_VERSION_OVERRIDE}" ]]; then
     OCB_VERSION="${OCB_VERSION_OVERRIDE}"
 fi
 
-# Validate required arguments
 if [[ -z "${MANIFEST_FILE}" ]]; then
     print_error "Manifest file is required. Use -m or --manifest option."
     show_usage
@@ -140,13 +137,12 @@ if [[ ! -f "${MANIFEST_FILE}" ]]; then
     exit 1
 fi
 
-# Build full image name with registry if provided
 FULL_IMAGE_NAME="${IMAGE_NAME}"
 if [[ -n "${REGISTRY}" ]]; then
     FULL_IMAGE_NAME="${REGISTRY}/${IMAGE_NAME}"
 fi
 
-# Print configuration
+
 print_info "Configuration:"
 echo "  Manifest: ${MANIFEST_FILE}"
 echo "  Image: ${FULL_IMAGE_NAME}:${TAG}"
@@ -155,12 +151,10 @@ echo "  OCB Version: ${OCB_VERSION}"
 echo "  Push: ${PUSH_IMAGE}"
 echo ""
 
-# Function to check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to install OCB
 install_ocb() {
     local ocb_path="./ocb"
 
@@ -191,7 +185,6 @@ install_ocb() {
     fi
 }
 
-# Function to setup Docker buildx
 setup_docker_buildx() {
     print_info "Setting up Docker buildx..."
 
@@ -200,7 +193,6 @@ setup_docker_buildx() {
         exit 1
     fi
 
-    # Create or use existing buildx builder
     local builder_name="otel-multiarch-builder"
 
     if docker buildx ls | grep -q "${builder_name}"; then
@@ -211,45 +203,60 @@ setup_docker_buildx() {
         docker buildx create --name "${builder_name}" --use --platform "${PLATFORMS}"
     fi
 
-    # Bootstrap the builder
     print_info "Bootstrapping buildx builder..."
     docker buildx inspect --bootstrap
 }
 
-# Function to build collector binary
+# Function to build collector binaries for multiple architectures
 build_collector() {
-    print_info "Building OpenTelemetry Collector binary..."
+    print_info "Building OpenTelemetry Collector binaries for multiple architectures..."
 
-    # Clean and create build directory
     rm -rf "${BUILD_DIR}" "${DIST_DIR}"
-    mkdir -p "${BUILD_DIR}"
+    mkdir -p "${BUILD_DIR}" "${DIST_DIR}"
 
-    # Copy manifest to build directory
     cp "${MANIFEST_FILE}" "${BUILD_DIR}/manifest.yaml"
 
-    # Build collector using OCB
     local ocb_path="../ocb"
     cd "${BUILD_DIR}"
 
-    print_info "Running OCB to generate collector..."
-    "${ocb_path}" --config manifest.yaml
+    # Parse platforms and build for each
+    IFS=',' read -ra PLATFORM_ARRAY <<< "${PLATFORMS}"
+    for platform in "${PLATFORM_ARRAY[@]}"; do
+        local goos=$(echo "${platform}" | cut -d'/' -f1)
+        local goarch=$(echo "${platform}" | cut -d'/' -f2)
+
+        if [[ "${goos}" != "linux" ]]; then
+            continue
+        fi
+
+        print_info "Building for ${goos}/${goarch}..."
+
+        export GOOS="${goos}"
+        export GOARCH="${goarch}"
+
+        local arch_dist="../${DIST_DIR}/${goarch}"
+        mkdir -p "${arch_dist}"
+
+        "${ocb_path}" --config manifest.yaml --output-path="${arch_dist}"
+
+        local binary_file
+        binary_file=$(find "${arch_dist}" -name "otelcol*" -type f -perm +111 | head -1)
+
+        if [[ -n "${binary_file}" && -f "${binary_file}" ]]; then
+            print_success "Collector binary built successfully for ${goarch}: $(basename "${binary_file}")"
+
+            mv "${binary_file}" "${arch_dist}/otelcol-contrib"
+            print_info "Binary renamed to: otelcol-contrib"
+        else
+            print_error "Failed to build collector binary for ${goarch}"
+            exit 1
+        fi
+    done
+
+    unset GOOS GOARCH
 
     cd ..
-
-    # Find the built binary (could be otelcol, otelcol-contrib, etc.)
-    local binary_file
-    binary_file=$(find "${DIST_DIR}" -name "otelcol*" -type f -perm +111 | head -1)
-
-    if [[ -n "${binary_file}" && -f "${binary_file}" ]]; then
-        print_success "Collector binary built successfully: $(basename "${binary_file}")"
-        # Always rename binary to otelcol-contrib
-        BINARY_NAME="otelcol-contrib"
-        mv "${binary_file}" "${DIST_DIR}/${BINARY_NAME}"
-        print_info "Binary renamed to: ${BINARY_NAME}"
-    else
-        print_error "Failed to build collector binary"
-        exit 1
-    fi
+    BINARY_NAME="otelcol-contrib"
 }
 
 # Function to build Docker image
@@ -259,17 +266,13 @@ build_docker_image() {
     cp Dockerfile "${BUILD_DIR}/Dockerfile"
     cp config.yaml "${BUILD_DIR}/config.yaml"
 
-    # Copy binary to build context
-    cp "${DIST_DIR}/${BINARY_NAME}" "${BUILD_DIR}/"
+    cp -r "${DIST_DIR}" "${BUILD_DIR}/"
 
-    # Build command
     local build_cmd="docker buildx build ${NO_CACHE} --platform ${PLATFORMS}"
 
     if [[ "${PUSH_IMAGE}" == true ]]; then
         build_cmd="${build_cmd} --push"
     else
-        # For multiarch builds without push, we need to save to registry or skip --load
-        # Since --load doesn't work with multiarch, we'll build without loading
         print_warning "Multiarch builds cannot be loaded locally. Building without --load."
         print_info "To use the image locally, either:"
         print_info "1. Use --push to push to registry, or"
@@ -281,7 +284,7 @@ build_docker_image() {
     print_info "Running: ${build_cmd}"
     eval "${build_cmd}"
 
-    if [[ $? -eq 0 ]]; then
+    if eval "${build_cmd}"; then
         print_success "Docker image built successfully"
         if [[ "${PUSH_IMAGE}" == true ]]; then
             print_success "Image pushed to registry: ${FULL_IMAGE_NAME}:${TAG}"
@@ -294,29 +297,14 @@ build_docker_image() {
     fi
 }
 
-# Function to cleanup
-cleanup() {
-    print_info "Cleaning up..."
-    if [[ -d "${BUILD_DIR}" ]]; then
-        rm -rf "${BUILD_DIR}"
-    fi
-    print_success "Cleanup completed"
-}
-
-# Main execution
 main() {
     print_info "Starting OpenTelemetry Collector multiarch build process..."
 
-    # Install dependencies
     install_ocb
     setup_docker_buildx
 
-    # Build process
     build_collector
     build_docker_image
-
-    # Cleanup
-    cleanup
 
     print_success "Build process completed successfully!"
     echo ""
@@ -334,5 +322,4 @@ main() {
     fi
 }
 
-# Run main function
 main "$@"

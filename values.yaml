@@ -1,0 +1,109 @@
+global:
+  domain: eu2.coralogix.com
+  clusterName: test
+opentelemetry-cluster-collector:
+  image:
+    repository: "ghcr.io/iblancasa/my-otel-releases/opentelemetry-collector-contrib"
+    pullPolicy: Always
+    tag: "0.133.0"
+  presets:
+    kubernetesEvents:
+      enabled: true
+    reduceResourceAttributes:
+      enabled: true
+    kubernetesResources:
+      enabled: true
+    fleetManagement:
+      enabled: true
+    clusterMetrics:
+      enabled: true
+    collectorMetrics:
+      enabled: true
+    kubernetesExtraMetrics:
+      enabled: true
+      scrapeAll: false
+opentelemetry-agent:
+  image:
+    repository: "ghcr.io/iblancasa/my-otel-releases/opentelemetry-collector-contrib"
+    pullPolicy: Always
+    tag: "0.133.0"
+  presets:
+    hostEntityEvents:
+      enabled: true
+    fleetManagement:
+      enabled: true
+    spanMetrics:
+      enabled: true
+      histogramBuckets:
+      - 1ms
+      - 4ms
+      - 10ms
+      - 20ms
+      - 50ms
+      - 100ms
+      - 200ms
+      - 500ms
+      - 1s
+      - 2s
+      - 5s
+      transformStatements: []
+    headSampling:
+      enabled: true
+      percentage: 10.0
+    profilesCollection:
+      enabled: false
+    logsCollection:
+      enabled: true
+      reduceLogAttributes:
+        enabled: true
+    kubeletMetrics:
+      enabled: true
+    collectorMetrics:
+      enabled: true
+    statsdReceiver:
+      enabled: true
+    hostMetrics:
+      enabled: true
+      process:
+        enabled: true
+    reduceResourceAttributes:
+      enabled: true
+    coralogixExporter:
+      enabled: true
+      privateKey: ${env:CORALOGIX_PRIVATE_KEY}
+      pipelines:
+      - logs
+      - metrics
+      - traces
+
+  # We need to set this because there is no preset
+  config:
+    processors:
+      redaction:
+        # Enable all the keys just for the example
+        allow_all_keys: true
+        url_sanitization:
+          enabled: true
+          # List of attibutes to sanitize
+          # Span names are sanitized by default
+          attributes:
+            - "url"
+
+    service:
+      pipelines:
+        logs:
+          processors: [redaction]
+        traces:
+          processors: [redaction]
+        metrics:
+          processors: [redaction]
+
+  targetAllocator:
+    enabled: false
+coralogix-ebpf-profiler:
+  enabled: false
+opentelemetry-gateway:
+  presets:
+    reduceResourceAttributes:
+      enabled: true
+

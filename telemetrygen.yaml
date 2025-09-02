@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: telemetrygen-job
+spec:
+  template:
+    metadata:
+      labels:
+        app: telemetrygen
+    spec:
+      containers:
+      - name: telemetrygen
+        image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:latest
+        env:
+          - name: NODE
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: "$(NODE):4317"
+        args:
+          - "traces"
+          - "--otlp-endpoint=$(OTEL_EXPORTER_OTLP_ENDPOINT)"
+          - "--otlp-insecure"
+          - "--rate=5000"
+          - "--duration=300s"
+          - "--telemetry-attributes"
+          - "http.request.method=\"GET\""
+          - "--telemetry-attributes"
+          - "url=\"http://example.com/users/12343435/asd\""
+      restartPolicy: Never
+  backoffLimit: 0
