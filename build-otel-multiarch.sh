@@ -245,8 +245,12 @@ build_collector() {
         if [[ -n "${binary_file}" && -f "${binary_file}" ]]; then
             print_success "Collector binary built successfully for ${goarch}: $(basename "${binary_file}")"
 
-            mv "${binary_file}" "${arch_dist}/otelcol-contrib"
-            print_info "Binary renamed to: otelcol-contrib"
+            if [[ "$(basename "${binary_file}")" != "otelcol-contrib" ]]; then
+                mv "${binary_file}" "${arch_dist}/otelcol-contrib"
+                print_info "Binary renamed to: otelcol-contrib"
+            else
+                print_info "Binary already named: otelcol-contrib"
+            fi
         else
             print_error "Failed to build collector binary for ${goarch}"
             exit 1
