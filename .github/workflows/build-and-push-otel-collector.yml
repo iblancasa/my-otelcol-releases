@@ -1,0 +1,51 @@
+name: Build and Push OpenTelemetry Collector
+
+on:
+  push:
+    branches: 
+      - main
+    paths:
+      - 'build-otel-multiarch.sh'
+      - 'manifest-contrib-133.yaml'
+      - 'Dockerfile'
+      - 'config.yaml'
+  workflow_dispatch:
+
+env:
+  ARTIFACTORY_URL: https://cgx.jfrog.io/artifactory/
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v2.1.0
+        with:
+          version: 2.12.1
+      
+      - name: Configure JFrog Docker Registry
+        run: |
+          jfrog rt docker-login ${{ env.ARTIFACTORY_URL }} --access-token ${{ secrets.ARTIFACTORY_NONUSER_ACCESS_TOKEN }}
+      
+      - name: Build and push OpenTelemetry Collector
+        run: |
+          ./build-otel-multiarch.sh -m manifest-contrib-133.yaml --push -r cgx.jfrog.io/coralogix-docker-images -t 0.133.0
+      
+      - name: Output image details
+        run: |
+          echo "Docker image pushed successfully:"
+          echo "Registry: cgx.jfrog.io/coralogix-docker-images"
+          echo "Image: opentelemetry-collector-contrib:0.133.0"
+          echo "Platforms: linux/amd64,linux/arm64"
