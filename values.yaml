@@ -88,6 +88,12 @@ opentelemetry-agent:
           # Span names are sanitized by default
           attributes:
             - "url"
+        # Enable db sanitization for sql statements and queries
+        # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/redactionprocessor#database-query-sanitization
+        db_sanitizer:
+          sql:
+            enabled: true
+            attributes: ["db.statement", "db.query"]
 
     service:
       pipelines:
