@@ -37,7 +37,7 @@ jobs:
       
       - name: Configure JFrog Docker Registry
         run: |
-          jfrog rt docker-login ${{ env.ARTIFACTORY_URL }} --access-token ${{ secrets.ARTIFACTORY_NONUSER_ACCESS_TOKEN }}
+          echo "${{ secrets.ARTIFACTORY_NONUSER_ACCESS_TOKEN }}" | docker login cgx.jfrog.io --username ${{ secrets.ARTIFACTORY_USERNAME }} --password-stdin
       
       - name: Build and push OpenTelemetry Collector
         run: |
