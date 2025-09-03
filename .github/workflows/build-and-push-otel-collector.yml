@@ -37,7 +37,7 @@ jobs:
       
       - name: Configure JFrog Docker Registry
         run: |
-          echo "${{ secrets.JFROG_PASSWORD }}" | docker login cgx.jfrog.io --username ${{ secrets.JFROG_USER }} --password-stdin
+          docker login cgx.jfrog.io --username ${{ secrets.JFROG_USER }} --password ${{ secrets.JFROG_PASSWORD }}
       
       - name: Build and push OpenTelemetry Collector
         run: |
