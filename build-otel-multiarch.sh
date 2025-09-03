@@ -233,14 +233,19 @@ build_collector() {
 
         export GOOS="${goos}"
         export GOARCH="${goarch}"
+        export CGO_ENABLED=0
 
         local arch_dist="../${DIST_DIR}/${goarch}"
         mkdir -p "${arch_dist}"
 
-        "${ocb_path}" --config manifest.yaml --output-path="${arch_dist}"
+        "${ocb_path}" --config manifest.yaml --output-path="${arch_dist}" --ldflags="-s -w -extldflags '-static'"
 
         local binary_file
-        binary_file=$(find "${arch_dist}" -name "otelcol*" -type f -executable | head -1)
+        if [[ "$(uname)" == "Darwin" ]]; then
+            binary_file=$(find "${arch_dist}" -name "otelcol*" -type f -perm +111 | head -1)
+        else
+            binary_file=$(find "${arch_dist}" -name "otelcol*" -type f -executable | head -1)
+        fi
 
         if [[ -n "${binary_file}" && -f "${binary_file}" ]]; then
             print_success "Collector binary built successfully for ${goarch}: $(basename "${binary_file}")"
@@ -257,10 +262,9 @@ build_collector() {
         fi
     done
 
-    unset GOOS GOARCH
+    unset GOOS GOARCH CGO_ENABLED
 
     cd ..
-    BINARY_NAME="otelcol-contrib"
 }
 
 # Function to build Docker image
