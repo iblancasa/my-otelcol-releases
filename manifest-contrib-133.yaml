@@ -69,7 +69,6 @@ exporters:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/datadogexporter v0.133.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/datasetexporter v0.133.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/dorisexporter v0.133.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/elasticsearchexporter v0.133.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/faroexporter v0.133.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.133.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/googlecloudexporter v0.133.0
@@ -264,5 +263,5 @@ replaces:
   - github.com/openshift/api => github.com/openshift/api v0.0.0-20230726162818-81f778f3b3ec
   # see https://github.com/open-telemetry/opentelemetry-collector/pull/13466
   - go.opentelemetry.io/otel/exporters/prometheus => go.opentelemetry.io/otel/exporters/prometheus v0.58.0
-  # Use custom redactionprocessor from branch 41535
-  - github.com/open-telemetry/opentelemetry-collector-contrib/processor/redactionprocessor => github.com/iblancasa/opentelemetry-collector-contrib/processor/redactionprocessor v0.0.0-20250828110120-0a8c90f472fd
+  # Use custom redactionprocessor from branch 41535-01330 with specific commit
+  - github.com/open-telemetry/opentelemetry-collector-contrib/processor/redactionprocessor => github.com/iblancasa/opentelemetry-collector-contrib/processor/redactionprocessor v0.0.0-20250911093504-46b15001a278
