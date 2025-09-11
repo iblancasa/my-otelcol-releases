@@ -2,7 +2,7 @@ name: Build and Push OpenTelemetry Collector
 
 on:
   push:
-    branches: 
+    branches:
       - main
     paths:
       - 'build-otel-multiarch.sh'
