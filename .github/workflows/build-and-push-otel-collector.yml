@@ -2,7 +2,7 @@ name: Build and Push OpenTelemetry Collector
 
 on:
   push:
-    branches: 
+    branches:
       - main
     paths:
       - 'build-otel-multiarch.sh'
@@ -37,8 +37,8 @@ jobs:
       
       - name: Configure JFrog Docker Registry
         run: |
-          docker login cgx.jfrog.io --username ${{ secrets.JFROG_USER }} --password ${{ secrets.JFROG_PASSWORD }}
-      
+          echo "${{ secrets.JFROG_PASSWORD }}" | docker login cgx.jfrog.io --username ${{ secrets.JFROG_USER }} --password-stdin
+ 
       - name: Build and push OpenTelemetry Collector
         run: |
           ./build-otel-multiarch.sh -m manifest-contrib-133.yaml --push -r cgx.jfrog.io/coralogix-docker-images -t 0.133.0
